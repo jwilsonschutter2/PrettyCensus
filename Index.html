@@ -1,15 +1,12 @@
-< html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Census API Builder</title>
-
   <link rel="stylesheet" href="css/styles.css">
 </head>
-
 <body>
-
 <header>
   <h1>Census Grabber &amp; Mapper</h1>
 </header>
@@ -18,12 +15,11 @@
   <p>
     Get an API key here:
     <a href="https://api.census.gov/data/key_signup.html" target="_blank" rel="noopener noreferrer">
-      https://api.census.gov/data/key_signup.html
+      Census API key signup
     </a>
   </p>
 </div>
 
-<!-- API KEY -->
 <section class="card">
   <h2 class="section-title">API Key</h2>
   <div class="row">
@@ -33,7 +29,6 @@
   </div>
 </section>
 
-<!-- YEAR -->
 <section class="card">
   <h2 class="section-title">Year</h2>
   <div class="row">
@@ -59,57 +54,20 @@
   </div>
 </section>
 
-<!-- DATASET -->
 <section class="card">
   <h2 class="section-title">Dataset</h2>
   <div class="row">
     <label for="datasetSelect" class="label">Choose a dataset:</label>
     <select id="datasetSelect">
       <option value="">-- Choose dataset --</option>
-      <option value="dec">Decennial Census</option>
-      <option value="acs/acs1">ACS 1-Year Estimates</option>
       <option value="acs/acs5">ACS 5-Year Estimates</option>
+      <option value="acs/acs1">ACS 1-Year Estimates</option>
+      <option value="dec/pl">Decennial Census PL</option>
+      <option value="dec/dhc">Decennial Census DHC</option>
     </select>
   </div>
 </section>
 
-<!-- TABLE SELECTION -->
-<section class="card">
-  <h2 class="section-title">Tables</h2>
-
-  <label class="block-label">Pre-set tables:</label>
-
-  <!-- ✅ Single dropdown that expands to grouped checkboxes -->
-  <div class="checkbox-dropdown" id="presetDropdown">
-    <button
-      type="button"
-      id="presetDropdownToggle"
-      class="checkbox-dropdown__toggle"
-      aria-haspopup="true"
-      aria-expanded="false"
-    >
-      Select pre-set tables
-      <span class="caret">▼</span>
-    </button>
-
-    <div class="checkbox-dropdown__menu" id="presetDropdownMenu" role="group" aria-label="Pre-set tables">
-      <div class="checkbox-dropdown__actions">
-        <button type="button" id="presetSelectAll">Select all</button>
-        <button type="button" id="presetClearAll">Clear</button>
-      </div>
-
-      <!-- groups injected here -->
-      <div id="presetCheckboxList"></div>
-    </div>
-  </div>
-
-  <label for="tableInput" class="block-label mt-12">Custom Table IDs (space/comma separated):</label>
-  <input id="tableInput" type="text" placeholder="e.g., B01003_001E B19013_001E">
-
-  <p class="hint">Selected presets + custom IDs are combined into your request.</p>
-</section>
-
-<!-- GEOGRAPHY -->
 <section class="card">
   <h2 class="section-title">Geography</h2>
 
@@ -120,58 +78,116 @@
       <option value="state">State</option>
       <option value="county">County</option>
       <option value="tract">Tract</option>
+      <option value="blockgroup">Block Group</option>
     </select>
   </div>
 
-  <!-- STATE -->
   <div id="stateOptions" class="subpanel" style="display:none;">
     <label class="inline">
       <input type="checkbox" id="allStatesCheckbox">
       All states
     </label>
+
     <div class="row">
-      <label for="stateInput" class="label">State FIPS:</label>
-      <input id="stateInput" type="text" placeholder="e.g., 17" maxlength="2">
+      <label for="stateSelect" class="label">State:</label>
+      <select id="stateSelect">
+        <option value="">-- Select State --</option>
+      </select>
+    </div>
+
+    <div class="row mt-12">
+      <label for="stateInput" class="label">Saved State FIPS:</label>
+      <input id="stateInput" type="text" placeholder="e.g., 45" maxlength="2" readonly>
     </div>
   </div>
 
-  <!-- COUNTY -->
   <div id="countyOptions" class="subpanel" style="display:none;">
     <label class="inline">
       <input type="checkbox" id="allCountiesCheckbox">
       All counties in state
     </label>
+
     <div class="row">
-      <label for="countyInput" class="label">County FIPS:</label>
-      <input id="countyInput" type="text" placeholder="e.g., 031" maxlength="3">
+      <label for="countySelect" class="label">County:</label>
+      <select id="countySelect" disabled>
+        <option value="">-- Select State First --</option>
+      </select>
+    </div>
+
+    <div class="row mt-12">
+      <label for="countyInput" class="label">Saved County FIPS:</label>
+      <input id="countyInput" type="text" placeholder="e.g., 083" maxlength="3" readonly>
+    </div>
+
+    <p id="countyStatus" class="hint"></p>
+  </div>
+
+  <div id="tractOptions" class="subpanel" style="display:none;">
+    <label class="inline">
+      <input type="checkbox" id="allTractsCheckbox" checked>
+      All tracts in county
+    </label>
+
+    <div class="row">
+      <label for="tractInput" class="label">Tract FIPS:</label>
+      <input id="tractInput" type="text" placeholder="e.g., 000100" maxlength="6" disabled>
     </div>
   </div>
 
-  <!-- TRACT -->
-  <div id="tractOptions" class="subpanel" style="display:none;">
+  <div id="blockGroupOptions" class="subpanel" style="display:none;">
     <label class="inline">
-      <input type="checkbox" id="allTractsCheckbox">
-      All tracts in county
+      <input type="checkbox" id="allBlockGroupsCheckbox" checked>
+      All block groups in county
     </label>
+
     <div class="row">
-      <label for="tractInput" class="label">Tract FIPS:</label>
-      <input id="tractInput" type="text" placeholder="e.g., 000100" maxlength="6">
+      <label for="blockGroupInput" class="label">Block Group:</label>
+      <input id="blockGroupInput" type="text" placeholder="e.g., 1" maxlength="1" disabled>
     </div>
+
+    <p class="hint">For countywide block groups, the app automatically uses <code>tract:*</code> behind the scenes.</p>
   </div>
 </section>
 
-<!-- URL OUTPUT -->
+<section class="card">
+  <h2 class="section-title">Tables</h2>
+  <p class="hint">
+    Choose one or more Census variables. Once year, dataset, and geography are selected, unavailable tables are automatically greyed out and disabled.
+  </p>
+
+  <div id="availabilityStatus" class="availability-status muted">
+    Select a year, dataset, and geography to check table availability.
+  </div>
+
+  <label class="block-label mt-12">Pre-set tables:</label>
+  <div class="checkbox-dropdown" id="presetDropdown">
+    <button type="button" id="presetDropdownToggle" class="checkbox-dropdown__toggle" aria-haspopup="true" aria-expanded="false">
+      Select pre-set tables
+      <span class="caret">▼</span>
+    </button>
+    <div class="checkbox-dropdown__menu" id="presetDropdownMenu" role="group" aria-label="Pre-set tables">
+      <div class="checkbox-dropdown__actions">
+        <input id="tableSearch" class="table-search" type="text" placeholder="Search tables by name or ID...">
+        <button type="button" id="presetSelectAll">Select available</button>
+        <button type="button" id="presetClearAll">Clear</button>
+      </div>
+      <div id="presetCheckboxList"></div>
+    </div>
+  </div>
+
+  <label for="tableInput" class="block-label mt-12">Custom Table IDs (space/comma separated):</label>
+  <input id="tableInput" type="text" placeholder="e.g., B01003_001E B19013_001E">
+  <p class="hint">Selected preset tables and custom IDs are combined into your request. Custom IDs are not greyed out automatically.</p>
+</section>
+
 <section class="card">
   <h2 class="section-title">Run</h2>
-
   <div class="row wrap">
     <button id="generateURL" type="button">Generate Census API URL</button>
     <button id="fetchJSON" type="button">Fetch JSON &amp; Display Table</button>
   </div>
-
   <p><strong>Your Census API URL:</strong></p>
   <textarea id="urlOutput" rows="3" readonly></textarea>
-
   <div id="jsonTableContainer" class="mt-12"></div>
 </section>
 
@@ -179,7 +195,7 @@
   <p>&copy; 2026 James Wilson-Schutter CDM Smith</p>
 </footer>
 
-<!-- ✅ Correct script include -->
+<script src="styles/geography.js"></script>
 <script src="js/scripts.js"></script>
 </body>
 </html>
