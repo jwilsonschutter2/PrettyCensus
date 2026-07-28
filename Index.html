@@ -1,0 +1,186 @@
+< html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Census API Builder</title>
+
+  <!-- ✅ Correct stylesheet include -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+<header>
+  <h1>Census Grabber &amp; Mapper</h1>
+</header>
+
+<div id="intro" class="card">
+  <p>
+    Get an API key here:
+    <a href="https://api.census.gov/data/key_signup.html" target="_blank" rel="noopener noreferrer">
+      https://api.census.gov/data/key_signup.html
+    </a>
+  </p>
+</div>
+
+<!-- API KEY -->
+<section class="card">
+  <h2 class="section-title">API Key</h2>
+  <div class="row">
+    <label for="APIKey" class="label">API Key:</label>
+    <input type="text" id="APIKey" placeholder="Paste your Census API key">
+    <button id="saveKeyBtn" type="button">Save</button>
+  </div>
+</section>
+
+<!-- YEAR -->
+<section class="card">
+  <h2 class="section-title">Year</h2>
+  <div class="row">
+    <label for="yearSelect" class="label">Select a year:</label>
+    <select id="yearSelect">
+      <option value="">-- Choose a year --</option>
+      <option value="2024">2024</option>
+      <option value="2023">2023</option>
+      <option value="2022">2022</option>
+      <option value="2021">2021</option>
+      <option value="2020">2020</option>
+      <option value="2019">2019</option>
+      <option value="2018">2018</option>
+      <option value="2017">2017</option>
+      <option value="2016">2016</option>
+      <option value="2015">2015</option>
+      <option value="2014">2014</option>
+      <option value="2013">2013</option>
+      <option value="2012">2012</option>
+      <option value="2011">2011</option>
+      <option value="2010">2010</option>
+    </select>
+  </div>
+</section>
+
+<!-- DATASET -->
+<section class="card">
+  <h2 class="section-title">Dataset</h2>
+  <div class="row">
+    <label for="datasetSelect" class="label">Choose a dataset:</label>
+    <select id="datasetSelect">
+      <option value="">-- Choose dataset --</option>
+      <option value="dec">Decennial Census</option>
+      <option value="acs/acs1">ACS 1-Year Estimates</option>
+      <option value="acs/acs5">ACS 5-Year Estimates</option>
+    </select>
+  </div>
+</section>
+
+<!-- TABLE SELECTION -->
+<section class="card">
+  <h2 class="section-title">Tables</h2>
+
+  <label class="block-label">Pre-set tables:</label>
+
+  <!-- ✅ Single dropdown that expands to grouped checkboxes -->
+  <div class="checkbox-dropdown" id="presetDropdown">
+    <button
+      type="button"
+      id="presetDropdownToggle"
+      class="checkbox-dropdown__toggle"
+      aria-haspopup="true"
+      aria-expanded="false"
+    >
+      Select pre-set tables
+      <span class="caret">▼</span>
+    </button>
+
+    <div class="checkbox-dropdown__menu" id="presetDropdownMenu" role="group" aria-label="Pre-set tables">
+      <div class="checkbox-dropdown__actions">
+        <button type="button" id="presetSelectAll">Select all</button>
+        <button type="button" id="presetClearAll">Clear</button>
+      </div>
+
+      <!-- groups injected here -->
+      <div id="presetCheckboxList"></div>
+    </div>
+  </div>
+
+  <label for="tableInput" class="block-label mt-12">Custom Table IDs (space/comma separated):</label>
+  <input id="tableInput" type="text" placeholder="e.g., B01003_001E B19013_001E">
+
+  <p class="hint">Selected presets + custom IDs are combined into your request.</p>
+</section>
+
+<!-- GEOGRAPHY -->
+<section class="card">
+  <h2 class="section-title">Geography</h2>
+
+  <div class="row">
+    <label for="geoLevel" class="label">Select geography level:</label>
+    <select id="geoLevel">
+      <option value="">-- Choose level --</option>
+      <option value="state">State</option>
+      <option value="county">County</option>
+      <option value="tract">Tract</option>
+    </select>
+  </div>
+
+  <!-- STATE -->
+  <div id="stateOptions" class="subpanel" style="display:none;">
+    <label class="inline">
+      <input type="checkbox" id="allStatesCheckbox">
+      All states
+    </label>
+    <div class="row">
+      <label for="stateInput" class="label">State FIPS:</label>
+      <input id="stateInput" type="text" placeholder="e.g., 17" maxlength="2">
+    </div>
+  </div>
+
+  <!-- COUNTY -->
+  <div id="countyOptions" class="subpanel" style="display:none;">
+    <label class="inline">
+      <input type="checkbox" id="allCountiesCheckbox">
+      All counties in state
+    </label>
+    <div class="row">
+      <label for="countyInput" class="label">County FIPS:</label>
+      <input id="countyInput" type="text" placeholder="e.g., 031" maxlength="3">
+    </div>
+  </div>
+
+  <!-- TRACT -->
+  <div id="tractOptions" class="subpanel" style="display:none;">
+    <label class="inline">
+      <input type="checkbox" id="allTractsCheckbox">
+      All tracts in county
+    </label>
+    <div class="row">
+      <label for="tractInput" class="label">Tract FIPS:</label>
+      <input id="tractInput" type="text" placeholder="e.g., 000100" maxlength="6">
+    </div>
+  </div>
+</section>
+
+<!-- URL OUTPUT -->
+<section class="card">
+  <h2 class="section-title">Run</h2>
+
+  <div class="row wrap">
+    <button id="generateURL" type="button">Generate Census API URL</button>
+    <button id="fetchJSON" type="button">Fetch JSON &amp; Display Table</button>
+  </div>
+
+  <p><strong>Your Census API URL:</strong></p>
+  <textarea id="urlOutput" rows="3" readonly></textarea>
+
+  <div id="jsonTableContainer" class="mt-12"></div>
+</section>
+
+<footer>
+  <p>&copy; 2026 James Wilson-Schutter CDM Smith</p>
+</footer>
+
+<!-- ✅ Correct script include -->
+<script src="js/scripts.js"></script>
+</body>
+</html>
