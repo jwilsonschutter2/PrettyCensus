@@ -34,3 +34,7 @@ Create Change Map now builds a reusable source-to-target relationship matrix in 
 ## Compare to Another Year removed
 
 The Compare to Another Year feature has been fully removed, including its Run button, panel, JavaScript implementation, state, event wiring, dropdown refresh call, script reference, comparison-only export filename helper, and named CSS selectors. Create Change Map remains independent.
+
+## Black and red visual theme
+
+The website now uses a black, charcoal, white, and red interface palette. Cards, workflow controls, forms, data tables, modals, statuses, map overlays, and mobile styles were updated. Mapbox maps use the dark-v11 base style. The change-map diverging data ramp remains red-white-blue because it encodes negative, neutral, and positive change rather than general interface branding.

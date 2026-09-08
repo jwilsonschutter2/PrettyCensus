@@ -367,7 +367,7 @@
       if (!map) {
         map = new mapboxgl.Map({
           container: "prettyCensusMap",
-          style: "mapbox://styles/mapbox/light-v11",
+          style: "mapbox://styles/mapbox/dark-v11",
           center: [-96, 38],
           zoom: 3
         });
