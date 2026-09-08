@@ -9,4 +9,6 @@ function suggestCurrentCsvName(){return `census_${selectedDataset.replaceAll('/'
 
 function suggestComparisonCsvName(){return `comparison_${selectedDataset.replaceAll('/','_')}_${$("comparisonYearSelect").value}_to_${selectedYear}_${geoLevel}.csv`;}
 
-function exportRowsToCsv(rows,filename){if(!rows||!rows.length)return;const headers=Object.keys(rows[0]);const csv=[headers.join(","),...rows.map(r=>headers.map(h=>csvEscape(r[h])).join(","))].join("\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();URL.revokeObjectURL(a.href);a.remove();}
+function downloadBlob(content,filename,mimeType){const blob=content instanceof Blob?content:new Blob([content],{type:mimeType});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),0);}
+function exportRowsToCsv(rows,filename){if(!rows||!rows.length)return;const headers=Object.keys(rows[0]);const csv=[headers.map(csvEscape).join(","),...rows.map(r=>headers.map(h=>csvEscape(r[h])).join(","))].join("\n");downloadBlob(csv,filename,"text/csv;charset=utf-8");}
+function downloadGeoJson(featureCollection,filename){if(!featureCollection||featureCollection.type!=="FeatureCollection")return;downloadBlob(JSON.stringify(featureCollection,null,2),filename,"application/geo+json;charset=utf-8");}

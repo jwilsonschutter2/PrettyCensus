@@ -1,27 +1,141 @@
-/** Two-year change mapping with GEOID validation and area-weighted split/merge handling. */
-(function(){
-"use strict";
-const OWNER="jwilsonschutter2",SRC="pc-change",FILL="pc-change-fill",LINE="pc-change-line",HOVER="pc-change-hover";
-const CACHE=new Map();
-const ADDITIVE=new Set(["B01001_001E","B01003_001E","B23025_003E","B17001_002E","B25001_001E","B25002_002E","B25002_003E","B25003_002E","B25003_003E","B01001_002E","B01001_026E","B08134_001E","B08134_002E","B08134_003E"]);
-let map=null,exportRows=[];
-const el=id=>document.getElementById(id);
-const digits=(v,n)=>{const m=String(v??"").match(/\d+/);return m?m[0].padStart(n,"0").slice(-n):"";};
-const num=v=>{const n=Number(v);return Number.isFinite(n)&&n>-666666666?n:null;};
-function setStatus(s,k){el("changeMapStatus").textContent=s;el("changeMapStatus").className=`map-status ${k||"muted"}`;}
-function rowId(r,l){const b=digits(r.state,2)+digits(r.county,3)+digits(r.tract,6);return l==="blockgroup"?b+digits(r["block group"],1):b;}
-function featureId(f,l){const p=f.properties||{},n=l==="blockgroup"?12:11;for(const k of ["GEOID","GEOID20","GEOID10","geoid","AFFGEOID"]){const d=String(p[k]??"").replace(/\D/g,"");if(d.length>=n)return d.slice(-n);}const b=digits(p.STATEFP??p.STATEFP20??p.STATEFP10,2)+digits(p.COUNTYFP??p.COUNTYFP20??p.COUNTYFP10,3)+digits(p.TRACTCE??p.TRACTCE20??p.TRACTCE10,6);return l==="blockgroup"?b+digits(p.BLKGRPCE??p.BLKGRPCE20??p.BLKGRPCE10,1):b;}
-function boundaryUrl(y,l,s,c){const folder=l==="blockgroup"?"BG":"TRACT";let file;if(+y===2010)file=l==="blockgroup"?`tl_2010_${s}_bg10.geojson.gz`:`tl_2010_${s}${c}_tract10.geojson.gz`;else file=`tl_${y}_${s}_${l==="blockgroup"?"bg":"tract"}.geojson.gz`;return `https://raw.githubusercontent.com/${OWNER}/${y}Cenv1/main/${y}/${folder}/${file}`;}
-async function jsonGz(r){const b=new Uint8Array(await r.arrayBuffer());if(b[0]!==31||b[1]!==139)return JSON.parse(new TextDecoder().decode(b));if(typeof DecompressionStream!=="function")throw Error("Browser gzip decompression is unavailable.");return JSON.parse(await new Response(new Blob([b]).stream().pipeThrough(new DecompressionStream("gzip"))).text());}
-async function boundaries(y,l,s,c){const u=boundaryUrl(y,l,s,c);if(!CACHE.has(u)){const r=await fetch(u,{mode:"cors",cache:"force-cache"});if(!r.ok)throw Error(`Boundary request failed (${r.status}): ${u}`);CACHE.set(u,await jsonGz(r));}const g=structuredClone(CACHE.get(u)),prefix=s+c;g.features=g.features.filter(f=>featureId(f,l).startsWith(prefix));return g;}
-async function rows(y,t){const u=buildSingleTopicUrl(y,t),r=await fetch(u);if(!r.ok)throw Error(`Census API request failed for ${y} (${r.status}).`);return apiArrayToObjects(await r.json());}
-function validate(g,r,l,s,c,y){const n=l==="blockgroup"?12:11,p=s+c,fi=g.features.map(f=>featureId(f,l)),ri=r.map(x=>rowId(x,l));const bad=[...fi,...ri].filter(x=>x.length!==n||!x.startsWith(p));const dup=a=>[...new Set(a.filter((x,i)=>a.indexOf(x)!==i))];if(bad.length||dup(fi).length||dup(ri).length)throw Error(`${y} GEOID validation failed: ${bad.length} invalid, ${dup(fi).length} duplicate boundaries, ${dup(ri).length} duplicate API rows.`);}
-const boxesOverlap=(a,b)=>a[0]<=b[2]&&a[2]>=b[0]&&a[1]<=b[3]&&a[3]>=b[1];
-function harmonize(og,ng,orows,nrows,t,l,mode){const ov=new Map(orows.map(r=>[rowId(r,l),num(r[t])])),nv=new Map(nrows.map(r=>[rowId(r,l),num(r[t])])),newIds=new Set(ng.features.map(f=>featureId(f,l))),allocated=new Map(),method=new Map(),incoming=new Map();let direct=0,splits=0,unmatched=0;
-for(const ofeature of og.features){const oid=featureId(ofeature,l),value=ov.get(oid);if(value==null)continue;if(newIds.has(oid)){allocated.set(oid,(allocated.get(oid)||0)+value);method.set(oid,"direct GEOID");incoming.set(oid,(incoming.get(oid)||0)+1);direct++;continue;}if(mode==="direct"){unmatched++;continue;}const oa=turf.area(ofeature),ob=turf.bbox(ofeature),parts=[];for(const nf of ng.features){if(!boxesOverlap(ob,turf.bbox(nf)))continue;let i=null;try{i=turf.intersect(ofeature,nf);}catch(_){}if(i){const w=oa?turf.area(i)/oa:0;if(w>1e-6)parts.push([featureId(nf,l),w]);}}const total=parts.reduce((a,x)=>a+x[1],0);if(!parts.length||total<.95){unmatched++;continue;}if(parts.length>1)splits++;for(const [nid,w0] of parts){allocated.set(nid,(allocated.get(nid)||0)+value*w0/total);method.set(nid,parts.length>1?"area-weighted split":"area-weighted");incoming.set(nid,(incoming.get(nid)||0)+1);}}
-let merges=0;incoming.forEach(n=>{if(n>1)merges++;});exportRows=[];ng.features.forEach((f,i)=>{const id=featureId(f,l),a=allocated.has(id)?allocated.get(id):null,b=nv.get(id)??null,d=a!=null&&b!=null?b-a:null,p=d!=null&&a!==0?d/a*100:null;f.id=i;f.properties={...(f.properties||{}),__geoid:id,__old:a,__new:b,__difference:d,__percent:p,__method:method.get(id)||"unmatched"};exportRows.push({GEOID:id,Earlier:a,Later:b,Difference:d,"Percent Change":p,Method:f.properties.__method});});return{geojson:ng,direct,splits,merges,unmatched};}
-function limit(g,field){const a=g.features.map(f=>Math.abs(num(f.properties[field])||0)).sort((x,y)=>x-y);return a.length?(a[Math.floor((a.length-1)*.95)]||1):1;}
-function draw(result,field,oy,ny,t,token){mapboxgl.accessToken=token;if(!map){map=new mapboxgl.Map({container:"prettyCensusChangeMap",style:"mapbox://styles/mapbox/light-v11",center:[-96,38],zoom:3});map.addControl(new mapboxgl.NavigationControl(),"top-right");}const render=()=>{[HOVER,LINE,FILL].forEach(id=>{if(map.getLayer(id))map.removeLayer(id);});if(map.getSource(SRC))map.removeSource(SRC);map.addSource(SRC,{type:"geojson",data:result.geojson,generateId:true});const m=limit(result.geojson,field);map.addLayer({id:FILL,type:"fill",source:SRC,paint:{"fill-color":["case",["==",["get",field],null],"rgba(180,180,180,.25)",["interpolate",["linear"],["to-number",["get",field]],-m,"#b2182b",0,"#f7f7f7",m,"#2166ac"]],"fill-opacity":.82}});map.addLayer({id:LINE,type:"line",source:SRC,paint:{"line-color":"#fff","line-width":.5}});map.addLayer({id:HOVER,type:"line",source:SRC,paint:{"line-color":"#f97316","line-width":2},filter:["==",["id"],-1]});map.on("mousemove",FILL,e=>{const f=e.features&&e.features[0];if(!f)return;map.setFilter(HOVER,["==",["id"],f.id]);const p=f.properties;el("changeMapReadout").innerHTML=`<strong>GEOID:</strong> ${escapeHtml(p.__geoid)}<br><strong>${oy}:</strong> ${p.__old==null?"No data":Number(p.__old).toLocaleString()}<br><strong>${ny}:</strong> ${p.__new==null?"No data":Number(p.__new).toLocaleString()}<br><strong>${field==="__percent"?"Percent change":"Difference"}:</strong> ${p[field]==null?"No data":Number(p[field]).toLocaleString(undefined,{maximumFractionDigits:2})}<br><strong>Method:</strong> ${escapeHtml(p.__method)}`;});const b=new mapboxgl.LngLatBounds();turf.coordEach(result.geojson,c=>b.extend(c));if(!b.isEmpty())map.fitBounds(b,{padding:30,duration:0});el("changeMapLegend").innerHTML=`<strong>${escapeHtml(tableFriendlyNames[t]||t)}</strong><div>Red: decrease</div><div>White: little change</div><div>Blue: increase</div>`;setTimeout(()=>map.resize(),0);};if(map.isStyleLoaded())render();else map.once("style.load",render);}
-async function build(){const t=el("comparisonTopicSelect").value,ya=+el("comparisonYearSelect").value,yb=+selectedYear,token=el("changeMapboxToken").value.trim()||el("mapboxToken").value.trim(),l=geoLevel,s=selectedState,c=selectedCounty,mode=el("harmonizationMethod").value,field=el("changeMetric").value;if(!t||!ya||!yb||!token)return setStatus("Select both years, a variable, and a Mapbox token.","error");if(!["tract","blockgroup"].includes(l)||!s||s==="*"||!c||c==="*")return setStatus("Select one state, one county, and Tract or Block Group.","error");if(ya===yb)return setStatus("Choose two different years.","error");if(mode==="area"&&!ADDITIVE.has(t))return setStatus("Area harmonization is limited to additive count variables. Use direct GEOID comparison or select a count variable.","error");const oy=Math.min(ya,yb),ny=Math.max(ya,yb);try{setStatus("Loading both vintages and validating GEOIDs...","checking");const[og,ng,or,nr]=await Promise.all([boundaries(oy,l,s,c),boundaries(ny,l,s,c),rows(oy,t),rows(ny,t)]);validate(og,or,l,s,c,oy);validate(ng,nr,l,s,c,ny);setStatus("Harmonizing changed geography...","checking");const result=harmonize(og,ng,or,nr,t,l,mode);draw(result,field,oy,ny,t,token);el("changeMapQa").textContent=`Validation: ${result.direct} direct GEOID matches; ${result.splits} old-feature splits; ${result.merges} new-feature merges; ${result.unmatched} unmatched old features.`;el("exportChangeCsvBtn").disabled=false;setStatus(`Change map created on ${ny} boundaries.`,"success");}catch(e){console.error(e);setStatus(e.message||String(e),"error");}}
-document.addEventListener("DOMContentLoaded",()=>{el("buildChangeMapBtn").addEventListener("click",build);el("exportChangeCsvBtn").addEventListener("click",()=>exportRowsToCsv(exportRows,`change_${el("comparisonYearSelect").value}_to_${selectedYear}_${geoLevel}.csv`));});
+/** Independent direct-GEOID two-year change map. */
+(function () {
+  "use strict";
+  const SOURCE = "prettycensus-change";
+  const FILL = `${SOURCE}-fill`;
+  const LINE = `${SOURCE}-line`;
+  let map;
+  let exportGeoJson;
+  const byId = id => document.getElementById(id);
+  const validNumber = input => {
+    const number = Number(input);
+    return Number.isFinite(number) && number > -666666666 ? number : null;
+  };
+  function setStatus(message, kind = "muted") {
+    const node = byId("changeMapStatus");
+    node.textContent = message;
+    node.className = `map-status ${kind}`;
+  }
+  function populateVariables() {
+    const select = byId("changeMapVariable");
+    const previous = select.value;
+    select.innerHTML = '<option value="">-- Select a variable --</option>';
+    selectedTables.forEach(id => {
+      const option = document.createElement("option");
+      option.value = id;
+      option.textContent = tableFriendlyNames[id] ? `${tableFriendlyNames[id]} (${id})` : id;
+      select.append(option);
+    });
+    if (selectedTables.includes(previous)) select.value = previous;
+    else if (selectedTables.length === 1) select.value = selectedTables[0];
+  }
+  window.populateChangeMapVariables = populateVariables;
+  async function fetchRows(year, topic) {
+    const url = buildSingleTopicUrl(year, topic);
+    if (!url) throw new Error("Dataset or geography selections are incomplete.");
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Census request for ${year} failed (${response.status}).`);
+    return apiArrayToObjects(await response.json());
+  }
+  function prepareFeatures(boundaries, earlierRows, laterRows, topic, level) {
+    const earlier = new Map(earlierRows.map(row => [PrettyCensusGeoid.fromRow(row, level), validNumber(row[topic])]));
+    const later = new Map(laterRows.map(row => [PrettyCensusGeoid.fromRow(row, level), validNumber(row[topic])]));
+    let matched = 0;
+    boundaries.features.forEach((feature, index) => {
+      const geoid = PrettyCensusGeoid.fromFeature(feature, level);
+      const oldValue = earlier.get(geoid) ?? null;
+      const newValue = later.get(geoid) ?? null;
+      const difference = oldValue !== null && newValue !== null ? newValue - oldValue : null;
+      const percent = difference !== null && oldValue !== 0 ? difference / oldValue * 100 : null;
+      if (oldValue !== null && newValue !== null) matched += 1;
+      feature.id = index;
+      feature.properties = { ...feature.properties, __geoid: geoid, __earlier: oldValue, __later: newValue,
+        __difference: difference, __percent: percent, __method: oldValue !== null ? "direct GEOID" : "unmatched" };
+    });
+    return { boundaries, matched, unmatchedEarlier: [...earlier.keys()].filter(id => !later.has(id)).length };
+  }
+  function getBounds(data) {
+    const bounds = new mapboxgl.LngLatBounds();
+    function visit(coordinates) {
+      if (!Array.isArray(coordinates)) return;
+      if (coordinates.length >= 2 && Number.isFinite(coordinates[0]) && Number.isFinite(coordinates[1])) bounds.extend(coordinates);
+      else coordinates.forEach(visit);
+    }
+    data.features.forEach(feature => feature.geometry && visit(feature.geometry.coordinates));
+    return bounds;
+  }
+  function render(result, field, earlierYear, laterYear, topic, token) {
+    mapboxgl.accessToken = token;
+    if (!map) {
+      map = new mapboxgl.Map({ container: "prettyCensusChangeMap", style: "mapbox://styles/mapbox/light-v11", center: [-96, 38], zoom: 3 });
+      map.addControl(new mapboxgl.NavigationControl(), "top-right");
+    }
+    const draw = () => {
+      [LINE, FILL].forEach(id => { if (map.getLayer(id)) map.removeLayer(id); });
+      if (map.getSource(SOURCE)) map.removeSource(SOURCE);
+      map.addSource(SOURCE, { type: "geojson", data: result.boundaries, generateId: true });
+      const values = result.boundaries.features.map(feature => Math.abs(validNumber(feature.properties[field]) || 0)).sort((a, b) => a - b);
+      const limit = values[Math.floor(values.length * 0.95)] || 1;
+      map.addLayer({ id: FILL, type: "fill", source: SOURCE, paint: {
+        "fill-color": ["case", ["==", ["get", field], null], "rgba(180,180,180,.25)",
+          ["interpolate", ["linear"], ["to-number", ["get", field]], -limit, "#b2182b", 0, "#f7f7f7", limit, "#2166ac"]],
+        "fill-opacity": 0.82
+      }});
+      map.addLayer({ id: LINE, type: "line", source: SOURCE, paint: { "line-color": "#fff", "line-width": 0.6 }});
+      map.on("mousemove", FILL, event => {
+        const p = event.features[0].properties;
+        byId("changeMapReadout").innerHTML = `<strong>GEOID:</strong> ${escapeHtml(p.__geoid)}<br>` +
+          `<strong>${earlierYear}:</strong> ${p.__earlier == null ? "No data" : Number(p.__earlier).toLocaleString()}<br>` +
+          `<strong>${laterYear}:</strong> ${p.__later == null ? "No data" : Number(p.__later).toLocaleString()}<br>` +
+          `<strong>Change:</strong> ${p[field] == null ? "No data" : Number(p[field]).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
+      });
+      const bounds = getBounds(result.boundaries);
+      if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 30, duration: 0 });
+      byId("changeMapLegend").innerHTML = `<strong>${escapeHtml(tableFriendlyNames[topic] || topic)}</strong><div>Red: decrease</div><div>White: little change</div><div>Blue: increase</div>`;
+      setTimeout(() => map.resize(), 0);
+    };
+    if (map.isStyleLoaded()) draw(); else map.once("style.load", draw);
+  }
+  async function buildChangeMap() {
+    const firstYear = Number(byId("changeMapYear1").value);
+    const secondYear = Number(byId("changeMapYear2").value);
+    const topic = byId("changeMapVariable").value;
+    const field = byId("changeMapMetric").value;
+    const token = byId("changeMapboxToken").value.trim() || byId("mapboxToken").value.trim();
+    if (!firstYear || !secondYear || firstYear === secondYear || !topic || !token) return setStatus("Choose two different years, a variable, and a Mapbox token.", "error");
+    if (!["tract", "blockgroup"].includes(geoLevel) || !selectedState || selectedState === "*" || !selectedCounty || selectedCounty === "*") return setStatus("Select one state, one county, and Tract or Block Group above.", "error");
+    const earlierYear = Math.min(firstYear, secondYear);
+    const laterYear = Math.max(firstYear, secondYear);
+    const boundaryOptions = { year: laterYear, level: geoLevel, state: selectedState, county: selectedCounty };
+    try {
+      setStatus("Loading both years and validating GEOIDs...", "checking");
+      const [earlierBoundaries, laterBoundaries, earlierRows, laterRows] = await Promise.all([
+        PrettyCensusBoundaries.load({ ...boundaryOptions, year: earlierYear }),
+        PrettyCensusBoundaries.load(boundaryOptions),
+        fetchRows(earlierYear, topic), fetchRows(laterYear, topic)
+      ]);
+      PrettyCensusBoundaries.filterCounty(earlierBoundaries, boundaryOptions);
+      PrettyCensusBoundaries.filterCounty(laterBoundaries, boundaryOptions);
+      PrettyCensusGeoid.validate({ features: earlierBoundaries.features, rows: earlierRows, level: geoLevel, state: selectedState, county: selectedCounty, label: earlierYear });
+      PrettyCensusGeoid.validate({ features: laterBoundaries.features, rows: laterRows, level: geoLevel, state: selectedState, county: selectedCounty, label: laterYear });
+      const result = prepareFeatures(laterBoundaries, earlierRows, laterRows, topic, geoLevel);
+      exportGeoJson = result.boundaries;
+      render(result, field, earlierYear, laterYear, topic, token);
+      byId("changeMapQa").textContent = `${result.matched} direct GEOID matches; ${result.unmatchedEarlier} earlier-year GEOIDs absent from the later year.`;
+      byId("exportChangeMapGeoJsonBtn").disabled = false;
+      setStatus(`Change map created on ${laterYear} boundaries.`, "success");
+    } catch (error) {
+      console.error(error);
+      setStatus(error.message || String(error), "error");
+    }
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    byId("buildChangeMapBtn").addEventListener("click", buildChangeMap);
+    byId("exportChangeMapGeoJsonBtn").addEventListener("click", () => {
+      if (exportGeoJson) downloadGeoJson(exportGeoJson, `change_${byId("changeMapYear1").value}_to_${byId("changeMapYear2").value}_${geoLevel}_${selectedState}_${selectedCounty}.geojson`);
+    });
+    document.addEventListener("change", event => {
+      if (event.target.classList.contains("presetCheckbox") || event.target.id === "tableInput") populateVariables();
+    });
+  });
 })();

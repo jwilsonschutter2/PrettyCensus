@@ -15,6 +15,7 @@
 
   let map = null;
   let currentBuild = 0;
+  let exportGeoJson = null;
 
   function el(id) {
     return document.getElementById(id);
@@ -357,6 +358,10 @@
       if (!joined.values.size) throw new Error("The Census response did not contain numeric values to map.");
       if (!joined.matched) throw new Error("No boundary GEOIDs matched the Census API response.");
       const breaks = quantileBreaks(Array.from(joined.values.values()), 5);
+      exportGeoJson = structuredClone(geojson);
+      window.prettyCensusCurrentGeoJSON = exportGeoJson;
+      const geoBtn = el("exportMapGeoJsonBtn");
+      if (geoBtn) geoBtn.disabled = false;
 
       mapboxgl.accessToken = token;
       if (!map) {
@@ -408,6 +413,11 @@
     }
     if (close && panel) close.addEventListener("click", () => { panel.style.display = "none"; });
     if (draw) draw.addEventListener("click", buildMap);
+    const exportBtn = el("exportMapGeoJsonBtn");
+    if (exportBtn) exportBtn.addEventListener("click", () => {
+      if (!exportGeoJson || typeof downloadGeoJson !== "function") return;
+      downloadGeoJson(exportGeoJson, `prettycensus_${selectedYear}_${geoLevel}_${selectedState}_${selectedCounty}.geojson`);
+    });
 
     document.addEventListener("change", event => {
       if (["yearSelect", "datasetSelect", "geoLevel", "stateSelect", "countySelect", "tractInput", "blockGroupInput", "tableInput"].includes(event.target.id) ||
