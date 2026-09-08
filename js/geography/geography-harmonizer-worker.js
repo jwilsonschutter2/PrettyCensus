@@ -14,13 +14,13 @@ function build({ sourceFeatures, targetFeatures, options = {} }) {
   const targetsById = new Map(targetFeatures.map((feature, index) => [id(feature), index]));
   const grid = buildGrid(targetFeatures);
   const targetPoints = targetFeatures.map(feature => safePoint(feature));
-  const relationships = [], diagnostics = [], intersectionErrorDetails = [];
+  const relationships = [], diagnostics = [];
   let sliversExcluded = 0, intersectionErrors = 0, directGeometryChanged = 0;
   for (const source of sourceFeatures) {
     const sourceId = id(source), sameIndex = targetsById.get(sourceId), sourceArea = safeArea(source);
     if (sameIndex !== undefined) {
       const overlap = safeIntersection(source, targetFeatures[sameIndex]);
-      if (overlap.error) { intersectionErrors++; intersectionErrorDetails.push({ source: sourceId, target: id(targetFeatures[sameIndex]), stage: "same-GEOID geometry QA", message: overlap.message }); }
+      if (overlap.error) intersectionErrors++;
       const geometryOverlap = sourceArea && overlap.area ? Math.min(1, overlap.area / sourceArea) : null;
       const geometryChanged = geometryOverlap === null || geometryOverlap < 0.999;
       if (geometryChanged) directGeometryChanged++;
@@ -32,7 +32,7 @@ function build({ sourceFeatures, targetFeatures, options = {} }) {
     let overlaps = [];
     for (const targetIndex of candidates) {
       const target = targetFeatures[targetIndex], overlap = safeIntersection(source, target);
-      if (overlap.error) { intersectionErrors++; intersectionErrorDetails.push({ source: sourceId, target: id(target), stage: "polygon intersection", message: overlap.message }); }
+      if (overlap.error) intersectionErrors++;
       if (!overlap.area) continue;
       const sourceShare = overlap.area / sourceArea, targetArea = safeArea(target);
       overlaps.push({ target: id(target), sourceShare, targetShare: targetArea ? overlap.area / targetArea : 0, area: overlap.area });
@@ -71,7 +71,7 @@ function build({ sourceFeatures, targetFeatures, options = {} }) {
     }
     diagnostics.push({ source: sourceId, reason: "unmatched-after-fallbacks" });
   }
-  return { relationships, diagnostics, intersectionErrorDetails, sliversExcluded, intersectionErrors, directGeometryChanged };
+  return { relationships, diagnostics, sliversExcluded, intersectionErrors, directGeometryChanged };
 }
 function record(source, target, sourceShare, targetShare, intersectionArea, method, confidence, geometryChanged, geometryOverlap, observedCoverage = 1) {
   return { source, target, sourceShare, targetShare, intersectionArea, direct: method === "direct-geoid", method, confidence, geometryChanged, geometryOverlap, observedCoverage, fallbackUsed: method.includes("fallback") };
@@ -79,7 +79,7 @@ function record(source, target, sourceShare, targetShare, intersectionArea, meth
 function id(feature) { return String(feature.properties?.__pc_geoid || ""); }
 function number(value, fallback) { const n = Number(value); return Number.isFinite(n) ? n : fallback; }
 function safeArea(feature) { try { const a = turf.area(feature); return Number.isFinite(a) && a > 0 ? a : 0; } catch (_) { return 0; } }
-function safeIntersection(a, b) { try { const i = turf.intersect(a, b); return { area: i ? safeArea(i) : 0, error: false, message: "" }; } catch (error) { return { area: 0, error: true, message: error && error.message ? error.message : String(error) }; } }
+function safeIntersection(a, b) { try { const i = turf.intersect(a, b); return { area: i ? safeArea(i) : 0, error: false }; } catch (_) { return { area: 0, error: true }; } }
 function safePoint(feature) { try { return turf.pointOnFeature(feature); } catch (_) { return null; } }
 function safeContains(feature, point) { try { return turf.booleanPointInPolygon(point, feature); } catch (_) { return false; } }
 function cells(box, size = 0.25) { const out = []; for (let x = Math.floor(box[0]/size); x <= Math.floor(box[2]/size); x++) for (let y = Math.floor(box[1]/size); y <= Math.floor(box[3]/size); y++) out.push(`${x}:${y}`); return out; }

@@ -31,10 +31,6 @@ Create Change Map now builds a reusable source-to-target relationship matrix in 
 - Non-additive variables are restricted to Exact GEOID only. Medians and percentages are not area allocated.
 - Area-mode map generation stops when allocated additive totals differ from source totals by more than 1%.
 
-## September 2026 map UI update
+## Compare to Another Year removed
 
-- Intersection failures are retained with source GEOID, target GEOID, processing stage, and error message and displayed in a table below Create Change Map.
-- Create Change Map uses a red-white-blue legend with no grey category.
-- Mapping Option uses only the five blue data classes. No-data polygons and their outlines are transparent and are omitted from the legend.
-- Compare to Another Year was removed from the Run interface. Compatibility no-op hooks remain so existing table-selection event code does not fail.
-- Census Grabber & Mapper is fixed to the top of the viewport, with body offset and scroll padding added to prevent content from being hidden beneath it.
+The Compare to Another Year feature has been fully removed, including its Run button, panel, JavaScript implementation, state, event wiring, dropdown refresh call, script reference, comparison-only export filename helper, and named CSS selectors. Create Change Map remains independent.

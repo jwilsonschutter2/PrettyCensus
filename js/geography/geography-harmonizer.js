@@ -73,7 +73,7 @@ window.PrettyCensusHarmonizer = (() => {
       allocatedTotal, allocationError: eligibleTotal ? Math.abs(allocatedTotal - eligibleTotal) / Math.abs(eligibleTotal) : 0,
       fallbackValueShare: eligibleTotal ? Math.abs(fallbackValue) / Math.abs(eligibleTotal) : 0,
       sliversExcluded: workerData.sliversExcluded || 0, intersectionErrors: workerData.intersectionErrors || 0,
-      directGeometryChanged: workerData.directGeometryChanged || 0, intersectionErrorDetails: workerData.intersectionErrorDetails || [], diagnostics: workerData.diagnostics || [] };
+      directGeometryChanged: workerData.directGeometryChanged || 0, diagnostics: workerData.diagnostics || [] };
     const classes = classify(records);
     input.targetGeoJson.features.forEach((feature, index) => {
       const id = PrettyCensusGeoid.fromFeature(feature, input.level), type = classes.targetType(id), sources = provenance.get(id) || [];

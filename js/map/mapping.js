@@ -222,7 +222,7 @@
   }
 
   function colorExpression(breaks) {
-    if (breaks.length < 6) return "rgba(0,0,0,0)";
+    if (breaks.length < 6) return "#dce6f2";
     return ["case",
       ["==", ["get", "__value"], null], "rgba(220,230,242,0.35)",
       ["step", ["to-number", ["get", "__value"]],
@@ -285,7 +285,7 @@
       id: MAP_FILL,
       type: "fill",
       source: MAP_SOURCE,
-      paint: { "fill-color": colorExpression(breaks), "fill-opacity": ["case", ["==", ["get", "__value"], null], 0, 0.78] }
+      paint: { "fill-color": colorExpression(breaks), "fill-opacity": 0.78 }
     });
     map.addLayer({
       id: MAP_LINE,
@@ -293,8 +293,7 @@
       source: MAP_SOURCE,
       paint: {
         "line-color": "#ffffff",
-        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.15, 10, 0.8],
-        "line-opacity": ["case", ["==", ["get", "__value"], null], 0, 1]
+        "line-width": ["interpolate", ["linear"], ["zoom"], 3, 0.15, 10, 0.8]
       }
     });
     map.addLayer({
