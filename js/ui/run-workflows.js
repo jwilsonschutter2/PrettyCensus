@@ -1,36 +1,11 @@
-/** Static, mutually exclusive Run workflow controller. */
-(function () {
-  "use strict";
-  const panelIds = ["fetchWorkflowPanel", "comparisonPanel", "mappingPanel", "changeMapPanel"];
-  function setOpen(panelId, open) {
-    const panel = document.getElementById(panelId);
-    const trigger = document.querySelector(`[aria-controls="${panelId}"]`);
-    if (panel) panel.hidden = !open;
-    if (trigger) trigger.setAttribute("aria-expanded", String(open));
-  }
-  function toggle(panelId) {
-    const panel = document.getElementById(panelId);
-    if (!panel) return;
-    const opening = panel.hidden;
-    panelIds.forEach(id => setOpen(id, id === panelId && opening));
-    if (!opening) return;
-    if (panelId === "comparisonPanel" && typeof populateComparisonTopicOptions === "function") populateComparisonTopicOptions();
-    if (panelId === "changeMapPanel" && typeof window.populateChangeMapVariables === "function") window.populateChangeMapVariables();
-    setTimeout(() => window.dispatchEvent(new Event("resize")), 0);
-  }
-  document.addEventListener("click", event => {
-    const close = event.target.closest("[data-close-panel]");
-    if (close) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      setOpen(close.dataset.closePanel, false);
-      return;
-    }
-    const trigger = event.target.closest(".workflow-toggle[aria-controls]");
-    if (!trigger) return;
-    event.preventDefault();
-    event.stopImmediatePropagation();
-    toggle(trigger.getAttribute("aria-controls"));
-  }, true);
-  document.addEventListener("DOMContentLoaded", () => panelIds.forEach(id => setOpen(id, false)));
+/** Mutually exclusive top-level Run workflows. */
+(function(){
+  const ids=["fetchWorkflowPanel","comparisonPanel","mappingPanel","changeMapPanel"];
+  const byId=id=>document.getElementById(id);
+  function visible(node){return node&&node.style.display!=="none"&&!node.hidden;}
+  function close(id){const p=byId(id);if(p)p.style.display="none";const b=document.querySelector(`[aria-controls="${id}"]`);if(b)b.setAttribute("aria-expanded","false");}
+  function toggle(id,before){const p=byId(id);if(!p)return;const was=visible(p);ids.forEach(close);if(was)return;if(before)before();p.style.display="block";const b=document.querySelector(`[aria-controls="${id}"]`);if(b)b.setAttribute("aria-expanded","true");p.scrollIntoView({behavior:"smooth",block:"nearest"});setTimeout(()=>window.dispatchEvent(new Event("resize")),0);}
+  function configure(card,buttonId,label,panelId,before){const b=byId(buttonId),p=byId(panelId);if(!b||!p)return;b.textContent=label;b.classList.add("workflow-toggle");b.setAttribute("aria-controls",panelId);b.setAttribute("aria-expanded","false");card.append(b,p);b.addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();toggle(panelId,before);},true);}
+  function init(){const first=byId("generateURL")||byId("fetchJSON"),card=first&&first.closest(".card"),heading=card&&card.querySelector(".section-title");if(!card||!heading)return;card.classList.add("workflow-accordion");let fetchToggle=byId("fetchWorkflowToggle"),fetchPanel=byId("fetchWorkflowPanel");if(!fetchToggle){fetchToggle=document.createElement("button");fetchToggle.id="fetchWorkflowToggle";fetchToggle.type="button";fetchToggle.className="workflow-toggle";fetchToggle.textContent="Fetch JSON & Display Table";fetchToggle.setAttribute("aria-controls","fetchWorkflowPanel");heading.insertAdjacentElement("afterend",fetchToggle);}if(!fetchPanel){fetchPanel=document.createElement("section");fetchPanel.id="fetchWorkflowPanel";fetchPanel.className="tool-panel workflow-panel";fetchToggle.insertAdjacentElement("afterend",fetchPanel);const actions=document.createElement("div");actions.className="workflow-subactions";[byId("fetchJSON"),byId("generateURL"),byId("exportCurrentCsvBtn")].forEach(n=>n&&actions.append(n));fetchPanel.append(actions);[byId("urlContainer"),byId("jsonTableContainer")].forEach(n=>n&&fetchPanel.append(n));}fetchToggle.addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();toggle("fetchWorkflowPanel");},true);configure(card,"comparisonOptionBtn","Compare to Another Year","comparisonPanel",()=>typeof populateComparisonTopicOptions==="function"&&populateComparisonTopicOptions());configure(card,"mappingOptionBtn","Mapping Option","mappingPanel");configure(card,"createChangeMapBtn","Create Change Map","changeMapPanel",()=>window.populateChangeMapVariables&&window.populateChangeMapVariables());[["closeComparisonPanelBtn","comparisonPanel"],["closeMappingPanelBtn","mappingPanel"],["closeChangeMapPanelBtn","changeMapPanel"]].forEach(([bid,pid])=>{const b=byId(bid);if(b)b.addEventListener("click",e=>{e.preventDefault();e.stopImmediatePropagation();close(pid);},true);});document.querySelectorAll(".action-button-row").forEach(r=>{if(!r.children.length)r.remove();});ids.forEach(close);}
+  document.addEventListener("DOMContentLoaded",init);
 })();

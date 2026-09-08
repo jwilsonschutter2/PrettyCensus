@@ -1,9 +1,8 @@
 /** Shared Census GEOID helpers. */
 window.PrettyCensusGeoid = (() => {
-  "use strict";
   function digits(value, length) {
-    const found = String(value ?? "").match(/\d+/);
-    return found ? found[0].padStart(length, "0").slice(-length) : "";
+    const match = String(value ?? "").match(/\d+/);
+    return match ? match[0].padStart(length, "0").slice(-length) : "";
   }
   function fromRow(row, level) {
     const tract = digits(row.state, 2) + digits(row.county, 3) + digits(row.tract, 6);
@@ -19,21 +18,22 @@ window.PrettyCensusGeoid = (() => {
     const tract = digits(p.STATEFP ?? p.STATEFP20 ?? p.STATEFP10, 2) +
       digits(p.COUNTYFP ?? p.COUNTYFP20 ?? p.COUNTYFP10, 3) +
       digits(p.TRACTCE ?? p.TRACTCE20 ?? p.TRACTCE10, 6);
-    return level === "blockgroup"
-      ? tract + digits(p.BLKGRPCE ?? p.BLKGRPCE20 ?? p.BLKGRPCE10, 1)
-      : tract;
+    return level === "blockgroup" ? tract + digits(p.BLKGRPCE ?? p.BLKGRPCE20 ?? p.BLKGRPCE10, 1) : tract;
+  }
+  function inspect(ids, length, prefix) {
+    const invalid = ids.filter(id => id.length !== length || !id.startsWith(prefix));
+    const duplicates = [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
+    return { invalid, duplicates };
   }
   function validate({ features, rows, level, state, county, label }) {
     const length = level === "blockgroup" ? 12 : 11;
     const prefix = state + county;
     const featureIds = features.map(feature => fromFeature(feature, level));
     const rowIds = rows.map(row => fromRow(row, level));
-    const invalid = [...featureIds, ...rowIds].filter(id => id.length !== length || !id.startsWith(prefix));
-    const duplicates = values => [...new Set(values.filter((value, index) => values.indexOf(value) !== index))];
-    const featureDuplicates = duplicates(featureIds);
-    const rowDuplicates = duplicates(rowIds);
-    if (invalid.length || featureDuplicates.length || rowDuplicates.length) {
-      throw new Error(`${label} GEOID validation failed: ${invalid.length} invalid, ${featureDuplicates.length} duplicate boundaries, ${rowDuplicates.length} duplicate Census rows.`);
+    const featureCheck = inspect(featureIds, length, prefix);
+    const rowCheck = inspect(rowIds, length, prefix);
+    if (featureCheck.invalid.length || rowCheck.invalid.length || featureCheck.duplicates.length || rowCheck.duplicates.length) {
+      throw new Error(`${label} GEOID validation failed: ${featureCheck.invalid.length + rowCheck.invalid.length} invalid; ${featureCheck.duplicates.length} duplicate boundaries; ${rowCheck.duplicates.length} duplicate API rows.`);
     }
     return { featureIds, rowIds };
   }
