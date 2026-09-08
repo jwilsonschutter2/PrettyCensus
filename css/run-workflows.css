@@ -27,4 +27,4 @@
   .workflow-subactions { display: grid; grid-template-columns: 1fr; }
   .workflow-subactions button { width: 100%; }
 }
-.change-map-controls{display:grid;grid-template-columns:repeat(2,minmax(190px,1fr));gap:12px;align-items:end;margin-bottom:12px}.change-map-qa{margin:0 0 12px;padding:10px 12px;border:1px solid #d7e3f3;border-radius:10px;background:#fff;font-size:13px}.change-map-qa:empty{display:none}@media(max-width:700px){.change-map-controls{grid-template-columns:1fr}}
+.change-map-controls{display:grid;grid-template-columns:repeat(2,minmax(220px,1fr));gap:12px;align-items:end}.change-map-qa{margin:12px 0;padding:10px;border:1px solid #d7e3f3;border-radius:10px;background:#fff}@media(max-width:700px){.change-map-controls{grid-template-columns:1fr}}

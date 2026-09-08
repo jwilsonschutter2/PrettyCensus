@@ -16,11 +16,25 @@ Serve this folder through a local web server or GitHub Pages. Do not open index.
 
 The code automatically selects the repository by year, builds the raw GitHub XYZ PBF template, inspects the z0 tile to discover its source-layer name, requests the selected Census variable, joins by GEOID, and applies a five-class quantile style.
 
-### September 2026 cleanup
-- The final Run workflow structure now lives directly in index.html. JavaScript only controls panel visibility.
-- Fetch, Compare, Mapping, and Create Change Map are mutually exclusive top-level panels.
-- Create Change Map is independent of the tabular comparison workflow.
-- Shared GEOID helpers are in js/geography/geoid.js.
-- Shared yearly boundary URL, gzip, caching, and county filtering are in js/geography/boundary-loader.js.
-- CSV and GeoJSON exports use one shared browser download helper.
-- Obsolete mapping archives were removed from the deployed package. Git history remains the appropriate archive.
+## Split/merge-aware Create Change Map
+
+Create Change Map now builds a reusable source-to-target relationship matrix in a Web Worker. The matrix is cached by year pair, state, county, and geography level.
+
+- Exact GEOID only keeps geometrically stable same-GEOID relationships.
+- Automatic and Area weighted allocate configured additive counts by normalized source-area overlap.
+- Intersections below Minimum source share are excluded as slivers.
+- Sources below Minimum source coverage are not allocated.
+- Target features are classified as direct, renumbered one-to-one, split, merge, complex, or unmatched.
+- GeoJSON output records source GEOIDs, source weights, relationship class, weighting method, and estimated status.
+- Relationship CSV exports the source-to-target matrix.
+- Validation reports direct/renumbered/split/merge/complex/unmatched counts, excluded slivers, and allocation error.
+- Non-additive variables are restricted to Exact GEOID only. Medians and percentages are not area allocated.
+- Area-mode map generation stops when allocated additive totals differ from source totals by more than 1%.
+
+## September 2026 map UI update
+
+- Intersection failures are retained with source GEOID, target GEOID, processing stage, and error message and displayed in a table below Create Change Map.
+- Create Change Map uses a red-white-blue legend with no grey category.
+- Mapping Option uses only the five blue data classes. No-data polygons and their outlines are transparent and are omitted from the legend.
+- Compare to Another Year was removed from the Run interface. Compatibility no-op hooks remain so existing table-selection event code does not fail.
+- Census Grabber & Mapper is fixed to the top of the viewport, with body offset and scroll padding added to prevent content from being hidden beneath it.

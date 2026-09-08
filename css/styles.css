@@ -3,3 +3,21 @@
 
 /* PrettyCensus Mapbox mapping panel */
 .mapping-controls{display:grid;grid-template-columns:minmax(220px,1fr) minmax(260px,1fr) auto;gap:12px;align-items:end;margin-bottom:12px}.map-shell{position:relative;min-height:520px;border:1px solid #c8d8eb;border-radius:16px;overflow:hidden;background:#e8eef5}.pretty-census-map{position:absolute;inset:0}.map-overlay{position:absolute;z-index:3;left:12px;max-width:min(330px,calc(100% - 80px));padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.94);box-shadow:0 6px 20px rgba(15,23,42,.18);font-size:12px}.map-legend{bottom:12px}.map-readout{top:12px}.legend-row{display:flex;align-items:center;gap:7px;margin-top:5px}.legend-row span{width:20px;height:12px;border:1px solid rgba(0,0,0,.15);border-radius:3px}.map-status{margin:0 0 12px;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:800}.map-status.muted{background:#eef2f7;color:var(--muted)}.map-status.checking{background:var(--warning-soft);color:var(--warning)}.map-status.success{background:var(--success-soft);color:var(--success)}.map-status.error{background:#fff1f2;color:var(--danger)}@media(max-width:820px){.mapping-controls{grid-template-columns:1fr}.map-shell{min-height:440px}}
+
+/* Fixed site title */
+.site-header-fixed{position:fixed;top:0;left:0;right:0;z-index:1000;box-shadow:0 4px 18px rgba(15,23,42,.25)}
+body{padding-top:58px;scroll-padding-top:72px}
+
+/* Change-map intersection-error audit table */
+.intersection-errors{margin-top:14px}
+.intersection-errors h3{display:flex;align-items:center;gap:8px;margin:0 0 6px;font-size:16px}
+.error-count{display:inline-flex;min-width:24px;height:24px;align-items:center;justify-content:center;padding:0 7px;border-radius:999px;background:#fff1f2;color:var(--danger);font-size:12px}
+.intersection-error-table{table-layout:fixed}
+.intersection-error-table th:nth-child(1){width:52px}
+.intersection-error-table th:nth-child(2),.intersection-error-table th:nth-child(3){width:145px}
+.intersection-error-table th:nth-child(4){width:170px}
+.intersection-error-table td{overflow-wrap:anywhere}
+
+/* Legends use color classes only. No-data features are fully transparent and omitted. */
+.map-legend{color:#172033}
+.map-legend .legend-row span{border-color:rgba(15,23,42,.25)}
