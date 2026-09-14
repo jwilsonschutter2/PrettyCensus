@@ -1,13 +1,2 @@
-/** PrettyCensus application bootstrap. */
-
-document.addEventListener("DOMContentLoaded", () => {
-  renderPresetCheckboxesGrouped();
-  populateStateDropdown();
-  wireEvents();
-  syncState();
-  syncCounty();
-  syncTract();
-  syncBlockGroup();
-  updateSelectedTablesFromUI();
-  resetAvailabilityUI();
-});
+function sync(){apiKey=$('APIKey').value.trim();selectedYear=$('yearSelect').value;selectedDataset=$('datasetSelect').value;geoLevel=$('geoLevel').value;selectedState=$('stateSelect').value;selectedCounty=$('countyInput').value.trim();selectedTract=$('tractInput').value.trim()||'*';selectedBlockGroup=$('blockGroupInput').value.trim()||'*';updateSelectedTablesFromUI();$('selectionSummary').textContent=`${selectedTables.length} unique Census columns selected.`;}
+document.addEventListener('DOMContentLoaded',()=>{for(let y=2024;y>=2010;y--)$('yearSelect').add(new Option(y,y));STATE_FIPS.forEach(([code,name])=>$('stateSelect').add(new Option(`${name} (${code})`,code)));renderPresetCheckboxesGrouped();wireDropdownEvents();document.querySelectorAll('input,select').forEach(n=>n.addEventListener('change',sync));$('tableInput').addEventListener('input',sync);$('saveKeyBtn').onclick=sync;$('generateURL').onclick=()=>{sync();$('urlOutput').value=buildCensusURL()||'Complete required selections.';};$('fetchJSON').onclick=()=>{sync();fetchJsonAndDisplay().catch(e=>$('jsonTableContainer').textContent=e.message);};$('exportCurrentCsvBtn').onclick=()=>exportRowsToCsv(currentRowsAsObjects(),suggestCurrentCsvName());sync();});
