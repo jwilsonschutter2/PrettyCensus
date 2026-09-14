@@ -1,6 +1,12 @@
-/** Friendly-name CSV and GeoJSON exports. */
-function currentRowsAsObjects(){return PrettyCensusExports.friendlyRows(apiArrayToObjects(currentFetchedData));}
+/**
+ * CSV export helpers and export filename builders.
+ * Auto-extracted from the original scripts.js to improve maintainability.
+ */
+
+function currentRowsAsObjects(){return apiArrayToObjects(currentFetchedData);}
+
 function suggestCurrentCsvName(){return `census_${selectedDataset.replaceAll('/','_')}_${selectedYear}_${geoLevel}.csv`;}
-function downloadBlob(content,filename,type){const blob=content instanceof Blob?content:new Blob([content],{type});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),0);}
-function exportRowsToCsv(rows,filename){if(!rows?.length)return;const headers=Object.keys(rows[0]);const csv=[headers.map(csvEscape).join(","),...rows.map(row=>headers.map(header=>csvEscape(row[header])).join(","))].join("\n");downloadBlob(csv,filename,"text/csv;charset=utf-8");}
-function downloadGeoJson(featureCollection,filename,variableIds=selectedTables){if(!featureCollection||featureCollection.type!=="FeatureCollection")return;const decorated=PrettyCensusExports.decorateGeoJson(structuredClone(featureCollection),variableIds);downloadBlob(JSON.stringify(decorated,null,2),filename,"application/geo+json;charset=utf-8");}
+
+function exportRowsToCsv(rows,filename){if(!rows||!rows.length)return;const headers=Object.keys(rows[0]);const csv=[headers.join(","),...rows.map(r=>headers.map(h=>csvEscape(r[h])).join(","))].join("\n");const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();URL.revokeObjectURL(a.href);a.remove();}
+
+function downloadGeoJson(featureCollection,filename){if(!featureCollection||featureCollection.type!=="FeatureCollection")return;const blob=new Blob([JSON.stringify(featureCollection,null,2)],{type:"application/geo+json;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=filename;document.body.appendChild(a);a.click();setTimeout(()=>URL.revokeObjectURL(a.href),0);a.remove();}
